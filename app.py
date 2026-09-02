@@ -1,58 +1,152 @@
+import io
+from collections import Counter
+import pandas as pd
+from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
 
 st.set_page_config(
-    page_title="DesignCraft Hub | Creative Operations",
+    page_title="DesignOps Studio",
     page_icon="🎨",
     layout="wide"
 )
 
-st.title("🎨 DesignCraft: Creative Suite & Ops Portal")
-st.caption("All-in-one studio: Automated tools, curated assets, and client project management.")
+# Persistent state for client tickets
+if "client_tickets" not in st.session_state:
+    st.session_state.client_tickets = [
+        {"Client": "Acme SaaS", "Task": "Homepage Hero Refresh", "Priority": "High", "Status": "In Progress"},
+        {"Client": "FinTech Daily", "Task": "Pitch Deck Redesign", "Priority": "Medium", "Status": "Review"}
+    ]
 
-col1, col2, col3 = st.columns(3)
+# Sidebar navigation
+st.sidebar.title("🎨 DesignOps Studio")
+page = st.sidebar.radio("Navigate", [
+    "1. Brand Palette Extractor",
+    "2. Ad Banner Resizer",
+    "3. Asset Storefront",
+    "4. Client Request Board"
+])
 
-with col1:
-    st.subheader("🛠️ Creative Micro-Tools")
-    st.write("Generate palettes, verify WCAG contrast, and resize ad banners instantly.")
-    st.info("Navigate to **Brand Toolkit** in the sidebar.")
+# -------------------------------------------------------------
+# 1. Brand Palette Extractor
+# -------------------------------------------------------------
+if page == "1. Brand Palette Extractor":
+    st.header("🎨 Brand Palette Extractor")
+    st.caption("Upload any brand logo or visual to extract dominant hex colors.")
 
-with col2:
-    st.subheader("📦 Digital Asset Hub")
-    st.write("Browse premium Figma kits, pitch deck layouts, and marketing templates.")
-    st.info("Navigate to **Asset Marketplace** in the sidebar.")
+    uploaded_img = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg"])
+    if uploaded_img:
+        img = Image.open(uploaded_img).convert("RGB")
+        st.image(img, caption="Uploaded File", width=250)
 
-with col3:
-    st.subheader("📋 Client Design Desk")
-    st.write("Submit design requests, review active deliverables, and manage retainers.")
-    st.info("Navigate to **Client Portal** in the sidebar.")
+        # Downsample and extract dominant colors
+        small_img = img.resize((100, 100))
+        pixels = list(small_img.getdata())
+        common_colors = [c[0] for c in Counter(pixels).most_common(5)]
 
-import streamlit as st
-from PIL import Image
-from collections import Counter
+        st.subheader("Extracted Palette")
+        cols = st.columns(len(common_colors))
+        for idx, (r, g, b) in enumerate(common_colors):
+            hex_val = f"#{r:02x}{g:02x}{b:02x}"
+            with cols[idx]:
+                st.markdown(
+                    f'<div style="background-color:{hex_val}; height:70px; border-radius:8px; border:1px solid #ddd;"></div>',
+                    unsafe_allow_html=True
+                )
+                st.code(hex_val, language="text")
 
-st.title("🎨 Brand Palette & Contrast Inspector")
+# -------------------------------------------------------------
+# 2. Ad Banner Resizer & Generator
+# -------------------------------------------------------------
+elif page == "2. Ad Banner Resizer":
+    st.header("📐 Ad Banner Generator")
+    st.caption("Auto-render formatted graphics for social marketing.")
 
-uploaded_file = st.file_uploader("Upload a brand logo or banner (PNG/JPG)", type=["png", "jpg", "jpeg"])
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        headline = st.text_input("Banner Headline", "Scale Your Creative Output")
+        subtext = st.text_input("Subtext", "Productized design workflows made simple.")
+        preset = st.selectbox("Dimension Preset", [
+            "Instagram Post (1080x1080)",
+            "Twitter/X Header (1500x500)",
+            "LinkedIn Banner (1200x628)"
+        ])
+        bg_color = st.color_picker("Background Color", "#0F172A")
+        text_color = st.color_picker("Text Color", "#F8FAFC")
 
-def get_dominant_colors(image, num_colors=5):
-    img = image.copy().convert("RGB").resize((100, 100))
-    pixels = list(img.getdata())
-    counts = Counter(pixels)
-    return [c[0] for c in counts.most_common(num_colors)]
+    # Dimensions lookup
+    dims = {
+        "Instagram Post (1080x1080)": (1080, 1080),
+        "Twitter/X Header (1500x500)": (1500, 500),
+        "LinkedIn Banner (1200x628)": (1200, 628)
+    }
+    w, h = dims[preset]
 
-if uploaded_file:
-    img = Image.open(uploaded_file)
-    st.image(img, caption="Source Asset", width=300)
+    # Generate banner canvas
+    banner = Image.new("RGB", (w, h), color=bg_color)
+    draw = ImageDraw.Draw(banner)
     
-    colors = get_dominant_colors(img, 5)
-    st.subheader("Extracted Palette")
-    
-    cols = st.columns(len(colors))
-    for idx, (r, g, b) in enumerate(colors):
-        hex_code = f"#{r:02x}{g:02x}{b:02x}"
+    # Text placement
+    draw.text((int(w * 0.1), int(h * 0.35)), headline, fill=text_color)
+    draw.text((int(w * 0.1), int(h * 0.5)), subtext, fill=text_color)
+
+    with col2:
+        st.subheader("Live Preview")
+        st.image(banner, use_container_width=True)
+
+        buf = io.BytesIO()
+        banner.save(buf, format="PNG")
+        st.download_button(
+            label="Download Banner (PNG)",
+            data=buf.getvalue(),
+            file_name="social_banner.png",
+            mime="image/png"
+        )
+
+# -------------------------------------------------------------
+# 3. Asset Storefront
+# -------------------------------------------------------------
+elif page == "3. Asset Storefront":
+    st.header("📦 Digital Asset Storefront")
+    st.caption("Downloadable design kits and templates.")
+
+    assets = [
+        {"title": "B2B SaaS Pitch Deck Kit", "format": "Figma / PPTX", "price": "$39", "desc": "35 high-conversion slides."},
+        {"title": "Social Ad Performance Bundle", "format": "Figma / Canva", "price": "$29", "desc": "60 tested e-commerce templates."},
+        {"title": "Design System Starter Kit", "format": "Figma", "price": "$49", "desc": "Typography, auto-layout, tokens."}
+    ]
+
+    cols = st.columns(len(assets))
+    for idx, asset in enumerate(assets):
         with cols[idx]:
-            st.markdown(
-                f'<div style="background-color: {hex_code}; height: 80px; border-radius: 8px; border: 1px solid #ccc;"></div>',
-                unsafe_allow_html=True
-            )
-            st.code(hex_code, language="text")
+            st.markdown(f"### {asset['title']}")
+            st.write(f"**Format:** {asset['format']}")
+            st.write(f"**Price:** {asset['price']}")
+            st.write(asset['desc'])
+            st.button(f"Purchase ({asset['price']})", key=f"buy_{idx}")
+
+# -------------------------------------------------------------
+# 4. Client Request Board
+# -------------------------------------------------------------
+elif page == "4. Client Request Board":
+    st.header("📋 Client Request Board")
+    st.caption("Simple queue to manage active retainer tasks.")
+
+    with st.expander("➕ Submit New Task"):
+        client_name = st.text_input("Client Name")
+        task_title = st.text_input("Task Description")
+        priority = st.selectbox("Priority", ["Low", "Medium", "High"])
+        if st.button("Submit Ticket"):
+            if client_name and task_title:
+                st.session_state.client_tickets.append({
+                    "Client": client_name,
+                    "Task": task_title,
+                    "Priority": priority,
+                    "Status": "Pending"
+                })
+                st.success("Ticket added.")
+            else:
+                st.error("Please fill in both fields.")
+
+    st.subheader("Active Tasks")
+    df = pd.DataFrame(st.session_state.client_tickets)
+    st.dataframe(df, use_container_width=True)
