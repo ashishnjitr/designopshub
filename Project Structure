@@ -1,0 +1,17 @@
+designops-platform/
+├── .streamlit/
+│   └── config.toml          # Custom theme and primary colors
+├── assets/
+│   └── logo.png
+├── pages/
+│   ├── 1_🎨_Brand_Toolkit.py
+│   ├── 2_📐_Ad_Banner_Studio.py
+│   ├── 3_📦_Asset_Marketplace.py
+│   └── 4_📋_Client_Portal.py
+├── utils/
+│   ├── auth.py              # Login / Session handling
+│   ├── db.py                # Database queries
+│   └── image_processor.py   # Pillow manipulations
+├── app.py                   # Main landing & dashboard
+├── requirements.txt
+└── README.md
